@@ -1,0 +1,35 @@
+{
+  "tools": {
+    "wikipedia": {
+      "enabled": true,
+      "class_name": "SimpleWikipediaTool",
+      "module": "simple_tools",
+      "description": "Search Wikipedia for factual information",
+      "config": {}
+    },
+    "calculator": {
+      "enabled": true,
+      "class_name": "CalculatorTool",
+      "module": "simple_tools",
+      "description": "Calculate mathematical expressions",
+      "config": {}
+    }
+  },
+  "agent_config": {
+    "max_iterations": 3,
+    "use_langchain_agent": true,
+    "agent_type": "openai-tools",
+    "analysis_required": false,
+    "information_gathering_required": false,
+    "answer_synthesis_required": false,
+    "iteration_evaluation_enabled": true
+  },
+  "search_strategy": {
+    "primary_sources": [
+      "wikipedia",
+      "calculator"
+    ],
+    "content_extraction_limit": 2,
+    "fallback_enabled": true
+  }
+}

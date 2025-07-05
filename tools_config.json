@@ -1,0 +1,59 @@
+{
+  "tools": {
+    "web_search": {
+      "enabled": true,
+      "class_name": "WebSearchTool",
+      "module": "langchain_tools",
+      "description": "Tool for searching the web using DuckDuckGo",
+      "config": {
+        "max_results_default": 5,
+        "timeout": 10
+      }
+    },
+    "content_extractor": {
+      "enabled": true,
+      "class_name": "WebContentExtractor",
+      "module": "langchain_tools",
+      "description": "Tool for extracting content from web pages",
+      "config": {
+        "max_length_default": 2000,
+        "timeout": 10,
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      }
+    },
+    "wikipedia": {
+      "enabled": true,
+      "class_name": "WikipediaTool",
+      "module": "langchain_tools",
+      "description": "Tool for searching Wikipedia",
+      "config": {
+        "max_results_default": 3,
+        "summary_sentences": 3
+      }
+    },
+    "calculator": {
+      "enabled": true,
+      "class_name": "CalculatorTool",
+      "module": "simple_tools",
+      "description": "Calculate mathematical expressions",
+      "config": {}
+    }
+  },
+  "agent_config": {
+    "max_iterations": 2,
+    "use_langchain_agent": true,
+    "agent_type": "openai-tools",
+    "analysis_required": false,
+    "information_gathering_required": false,
+    "answer_synthesis_required": false,
+    "iteration_evaluation_enabled": true
+  },
+  "search_strategy": {
+    "primary_sources": [
+      "web_search",
+      "wikipedia"
+    ],
+    "content_extraction_limit": 2,
+    "fallback_enabled": true
+  }
+}

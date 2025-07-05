@@ -5,9 +5,10 @@ import os
 import logging
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
+from pydantic import SecretStr
 
 from langchain_openai import AzureChatOpenAI
-from tools import WebSearchTool, WebContentExtractor, WikipediaTool
+from tool_loader import ToolLoader
 
 # Load environment variables
 load_dotenv()
@@ -25,9 +26,7 @@ class IterativeAIAgent:
     def __init__(self):
         """Initialize the AI agent with Azure OpenAI and tools."""
         self.llm = self._setup_llm()
-        self.web_search = WebSearchTool()
-        self.content_extractor = WebContentExtractor()
-        self.wikipedia = WikipediaTool()
+        self.tool_loader = ToolLoader()
         self.conversation_history = []
         
     def _setup_llm(self) -> AzureChatOpenAI:
@@ -44,15 +43,16 @@ class IterativeAIAgent:
             
             if missing_vars:
                 raise ValueError(f"Missing required environment variables: {missing_vars}")
-            
+            api_key_str = os.getenv('AZURE_OPENAI_API_KEY')
             llm = AzureChatOpenAI(
-                api_key=os.getenv('AZURE_OPENAI_API_KEY'),
+                api_key=SecretStr(api_key_str) if api_key_str else None,
                 azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'),
                 api_version=os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-15-preview'),
-                deployment_name=os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME'),
+                azure_deployment=os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME'),
                 temperature=0.1,
                 max_tokens=1000,
             )
+            
             logger.info("✅ Azure OpenAI LLM initialized successfully")
             return llm
         except Exception as e:
@@ -116,23 +116,35 @@ class IterativeAIAgent:
         # Use the first search term as primary
         primary_term = search_terms[0]
         
-        # Search Wikipedia if needed
-        if analysis.get('NEEDS_WIKIPEDIA', '').lower() == 'yes':
+        # Search Wikipedia if needed and tool is available
+        if (analysis.get('NEEDS_WIKIPEDIA', '').lower() == 'yes' and 
+            self.tool_loader.is_tool_enabled('wikipedia')):
             logger.info("📚 Searching Wikipedia...")
-            wiki_results = self.wikipedia.search(primary_term, max_results=2)
-            all_results.extend(wiki_results)
+            wikipedia_tool = self.tool_loader.get_tool('wikipedia')
+            if wikipedia_tool:
+                wiki_results = wikipedia_tool.search(primary_term, max_results=2)
+                all_results.extend(wiki_results)
         
-        # Search the web if needed
-        if analysis.get('NEEDS_WEB_SEARCH', '').lower() == 'yes':
+        # Search the web if needed and tool is available
+        if (analysis.get('NEEDS_WEB_SEARCH', '').lower() == 'yes' and 
+            self.tool_loader.is_tool_enabled('web_search')):
             logger.info("🌐 Searching the web...")
-            web_results = self.web_search.search(primary_term, max_results=3)
-            all_results.extend(web_results)
-            
-            # Extract content from top results
-            for result in web_results[:2]:  # Only extract from top 2 results
-                if result.get('url'):
-                    content = self.content_extractor.extract_content(result['url'])
-                    result['full_content'] = content
+            web_search_tool = self.tool_loader.get_tool('web_search')
+            if web_search_tool:
+                web_results = web_search_tool.search(primary_term, max_results=3)
+                all_results.extend(web_results)
+                
+                # Extract content from top results if content extractor is available
+                if self.tool_loader.is_tool_enabled('content_extractor'):
+                    content_extractor = self.tool_loader.get_tool('content_extractor')
+                    if content_extractor:
+                        search_strategy = self.tool_loader.get_search_strategy()
+                        extraction_limit = search_strategy.get('content_extraction_limit', 2)
+                        
+                        for result in web_results[:extraction_limit]:
+                            if result.get('url'):
+                                content = content_extractor.extract_content(result['url'])
+                                result['full_content'] = content
         
         logger.info(f"📊 Gathered {len(all_results)} information sources")
         return all_results
@@ -192,7 +204,7 @@ class IterativeAIAgent:
         
         Original Query: "{query}"
         
-        Current Answer: "{current_answer[:500]}..."
+        Current Answer: "{current_answer}"
         
         Does this answer:
         1. Fully address all aspects of the user's query?
@@ -218,8 +230,15 @@ class IterativeAIAgent:
             logger.error(f"❌ Error evaluating iteration need: {str(e)}")
             return False
     
-    def process_query(self, query: str, max_iterations: int = 3) -> str:
+    def process_query(self, query: str) -> str:
         """Process a user query with iterative improvement."""
+        
+        agent_config = self.tool_loader.get_agent_config()
+        max_iterations = agent_config.get('max_iterations', 3)
+        
+        # Ensure max_iterations is an integer and not None
+        if max_iterations is None:
+            max_iterations = 3
         
         print(f"\n🤖 Processing your query: '{query}'")
         print("=" * 60)
@@ -279,6 +298,9 @@ class IterativeAIAgent:
         print("- Type 'quit' or 'exit' to stop")
         print("- Type 'history' to see conversation history")
         print("- Type 'clear' to clear conversation history")
+        print("- Type 'tools' to see available tools and their status")
+        print("- Type 'reload' to reload tool configuration")
+        print("- Type 'tools' to see available tools and their status")
         print("=" * 50)
         
         while True:
@@ -296,6 +318,18 @@ class IterativeAIAgent:
                 elif user_input.lower() == 'clear':
                     self.conversation_history = []
                     print("🗑️  Conversation history cleared!")
+                    continue
+                
+                elif user_input.lower() == 'reload':
+                    try:
+                        self.tool_loader.reload_config()
+                        print("🔄 Tool configuration reloaded successfully!")
+                    except Exception as e:
+                        print(f"❌ Failed to reload configuration: {str(e)}")
+                    continue
+                
+                elif user_input.lower() == 'tools':
+                    self.show_tool_status()
                     continue
                 
                 elif not user_input:
@@ -332,6 +366,35 @@ class IterativeAIAgent:
             print(f"   Iterations: {entry['iterations']}")
             print(f"   Answer: {entry['answer'][:200]}...")
             print("-" * 40)
+    
+    def show_tool_status(self):
+        """Display the status of all available tools."""
+        print("\n🔧 Tool Status:")
+        print("=" * 40)
+        
+        enabled_tools = self.tool_loader.get_enabled_tools()
+        if not enabled_tools:
+            print("❌ No tools are currently enabled.")
+            return
+        
+        for tool_name in enabled_tools:
+            description = self.tool_loader.get_tool_description(tool_name)
+            config = self.tool_loader.get_tool_config(tool_name)
+            
+            print(f"✅ {tool_name}: {description}")
+            if config.get('config'):
+                print(f"   Config: {config['config']}")
+        
+        print("\n📋 Agent Configuration:")
+        agent_config = self.tool_loader.get_agent_config()
+        for key, value in agent_config.items():
+            print(f"   {key}: {value}")
+        
+        print("\n🔍 Search Strategy:")
+        search_strategy = self.tool_loader.get_search_strategy()
+        for key, value in search_strategy.items():
+            print(f"   {key}: {value}")
+        print("=" * 40)
 
 def main():
     """Main function to run the AI agent."""

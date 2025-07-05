@@ -144,6 +144,32 @@ You can customize various aspects of the agent:
 - Content extraction length (default: 2000 characters)
 - LLM parameters (temperature, max tokens, etc.)
 
+## New Configuration System
+
+The AI Agent now features a flexible JSON-based configuration system that allows you to customize tool behavior without modifying source code.
+
+### Key Features:
+- **🔧 Tool Management**: Enable/disable tools via configuration
+- **⚙️ Customizable Settings**: Adjust search limits, timeouts, and other parameters
+- **🔄 Runtime Reload**: Update configuration without restarting the agent
+- **📊 Tool Status**: View current tool status and configurations
+
+### Configuration File
+
+Edit `tools_config.json` to customize:
+- Which tools are enabled
+- Tool-specific settings (timeouts, result limits, etc.)
+- Agent behavior (max iterations, search strategy)
+
+See [CONFIGURATION.md](CONFIGURATION.md) for detailed documentation.
+
+### Interactive Commands
+
+- `tools` - Display tool status and configuration
+- `reload` - Reload configuration from file
+- `history` - View conversation history
+- `clear` - Clear conversation history
+
 ## Error Handling
 
 The agent includes comprehensive error handling:
