@@ -1,10 +1,18 @@
 {
+  "api_keys": {
+    "brave_search": {
+      "description": "Brave Search API key for web search functionality",
+      "env_var": "BRAVE_SEARCH_API_KEY",
+      "required": true,
+      "url": "https://api.search.brave.com/"
+    }
+  },
   "tools": {
     "web_search": {
       "enabled": true,
-      "class_name": "WebSearchTool",
+      "function_name": "web_search",
       "module": "langchain_tools",
-      "description": "Tool for searching the web using DuckDuckGo",
+      "description": "Tool for searching the web using Brave Search API",
       "config": {
         "max_results_default": 5,
         "timeout": 10
@@ -12,7 +20,7 @@
     },
     "content_extractor": {
       "enabled": true,
-      "class_name": "WebContentExtractor",
+      "function_name": "extract_content",
       "module": "langchain_tools",
       "description": "Tool for extracting content from web pages",
       "config": {
@@ -23,20 +31,13 @@
     },
     "wikipedia": {
       "enabled": true,
-      "class_name": "WikipediaTool",
+      "function_name": "wikipedia_search",
       "module": "langchain_tools",
       "description": "Tool for searching Wikipedia",
       "config": {
         "max_results_default": 3,
         "summary_sentences": 3
       }
-    },
-    "calculator": {
-      "enabled": true,
-      "class_name": "CalculatorTool",
-      "module": "simple_tools",
-      "description": "Calculate mathematical expressions",
-      "config": {}
     }
   },
   "agent_config": {

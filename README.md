@@ -5,7 +5,7 @@ An intelligent AI agent built with LangChain and Azure OpenAI that can access th
 ## Features
 
 - 🤖 **Iterative Processing**: The agent analyzes queries and iteratively improves answers
-- 🌐 **Internet Access**: Searches the web using DuckDuckGo and extracts content from web pages
+- 🌐 **Internet Access**: Searches the web using Brave Search API and extracts content from web pages
 - 📚 **Wikipedia Integration**: Searches Wikipedia for factual information
 - 🔄 **Self-Improving**: Evaluates its own answers and decides if more research is needed
 - 💬 **Interactive Interface**: Easy-to-use command-line interface with conversation history
@@ -19,14 +19,16 @@ An intelligent AI agent built with LangChain and Azure OpenAI that can access th
 pip install -r requirements.txt
 ```
 
-### 2. Configure Azure OpenAI
+### 2. Configure API Keys
 
 1. Copy the example environment file:
 ```bash
 cp .env.example .env
 ```
 
-2. Edit `.env` and fill in your Azure OpenAI credentials:
+2. Edit `.env` and fill in your API credentials:
+
+**Required (Azure OpenAI):**
 ```
 AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
 AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
@@ -34,7 +36,20 @@ AZURE_OPENAI_API_VERSION=2024-02-15-preview
 AZURE_OPENAI_DEPLOYMENT_NAME=your_deployment_name_here
 ```
 
-### 3. Run the Agent
+**Optional (Web Search):**
+```
+BRAVE_SEARCH_API_KEY=your_brave_search_api_key_here
+```
+
+### 3. Get Brave Search API Key (Optional)
+
+For web search functionality:
+1. Go to [Brave Search API](https://api.search.brave.com/)
+2. Sign up for a free account
+3. Get your API key from the dashboard
+4. Add it to your `.env` file
+
+### 4. Run the Agent
 
 ```bash
 python agent.py
@@ -50,7 +65,7 @@ The agent follows an iterative process for each user query:
 - Identifies optimal search terms
 
 ### 2. Information Gathering
-- **Web Search**: Uses DuckDuckGo to find recent and relevant information
+- **Web Search**: Uses Brave Search API to find recent and relevant information
 - **Content Extraction**: Extracts full content from promising web pages
 - **Wikipedia Search**: Searches Wikipedia for factual, encyclopedic information
 
@@ -98,7 +113,7 @@ agent.py
 │   └── Iteration Control
 │
 tools.py
-├── WebSearchTool (DuckDuckGo search)
+├── WebSearchTool (Brave Search API)
 ├── WebContentExtractor (Web page content)
 └── WikipediaTool (Wikipedia search)
 ```
@@ -112,9 +127,10 @@ The main agent class that orchestrates the entire process:
 - Handles iterative improvement logic
 
 ### WebSearchTool
-Performs web searches using DuckDuckGo:
-- Returns search results with titles, snippets, and URLs
+Performs web searches using Brave Search API:
+- Returns search results with titles, descriptions, and URLs
 - Handles search errors gracefully
+- Requires BRAVE_SEARCH_API_KEY environment variable
 
 ### WebContentExtractor
 Extracts content from web pages:
@@ -194,9 +210,8 @@ Detailed logging shows the agent's thought process:
 
 - **langchain**: Core LangChain framework
 - **langchain-openai**: Azure OpenAI integration
-- **requests**: HTTP requests for web content
+- **requests**: HTTP requests for web content and Brave Search API
 - **beautifulsoup4**: HTML parsing and content extraction
-- **duckduckgo-search**: Web search capabilities
 - **wikipedia**: Wikipedia API access
 - **python-dotenv**: Environment variable management
 

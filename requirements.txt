@@ -4,5 +4,4 @@ langchain-community>=0.0.12
 requests>=2.31.0
 beautifulsoup4>=4.12.2
 python-dotenv>=1.0.0
-duckduckgo-search>=4.1.1
 wikipedia>=1.4.0

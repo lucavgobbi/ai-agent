@@ -55,32 +55,44 @@ class ToolLoader:
     def _load_single_tool(self, tool_name: str, tool_config: Dict[str, Any]):
         """Load a single tool based on its configuration."""
         module_name = tool_config.get('module')
-        class_name = tool_config.get('class_name')
+        function_name = tool_config.get('function_name')  # For @tool decorated functions
+        class_name = tool_config.get('class_name')        # For legacy class-based tools
         config = tool_config.get('config', {})
         
-        if not module_name or not class_name:
-            raise ValueError(f"Tool '{tool_name}' missing 'module' or 'class_name' in configuration")
+        if not module_name:
+            raise ValueError(f"Tool '{tool_name}' missing 'module' in configuration")
+        
+        if not function_name and not class_name:
+            raise ValueError(f"Tool '{tool_name}' missing 'function_name' or 'class_name' in configuration")
         
         # Import the module
         module = importlib.import_module(module_name)
         
-        # Get the class
-        tool_class = getattr(module, class_name)
-        
-        # Initialize the tool with configuration
-        if config:
-            tool_instance = tool_class(**config)
+        if function_name:
+            # Handle @tool decorated functions
+            tool_function = getattr(module, function_name)
+            tool_instance = tool_function  # The @tool decorator returns a tool instance
+        elif class_name:
+            # Handle legacy class-based tools
+            tool_class = getattr(module, class_name)
+            
+            # Initialize the tool with configuration
+            if config:
+                tool_instance = tool_class(**config)
+            else:
+                tool_instance = tool_class()
         else:
-            tool_instance = tool_class()
+            raise ValueError(f"Tool '{tool_name}' must have either 'function_name' or 'class_name'")
         
         self.loaded_tools[tool_name] = {
             'instance': tool_instance,
             'config': tool_config,
             'description': tool_config.get('description', ''),
-            'is_langchain_tool': isinstance(tool_instance, BaseTool)
+            'is_langchain_tool': isinstance(tool_instance, BaseTool) or hasattr(tool_instance, 'name')
         }
         
-        logger.info(f"✅ Loaded tool '{tool_name}' ({class_name})")
+        tool_type = "function-based" if function_name else "class-based"
+        logger.info(f"✅ Loaded {tool_type} tool '{tool_name}' ({function_name or class_name})")
     
     def get_tool(self, tool_name: str) -> Optional[Any]:
         """Get a loaded tool instance by name."""
